@@ -1,0 +1,94 @@
+================================================================================
+PDF Master Pro - Relatorio oficial de Testes da Fase 6 (seguranca)
+================================================================================
+Data de execucao:  2026-06-07T18:56:59.552Z
+Runner:            tests/phase6/test-phase6.mjs (oficial, versionado)
+Base URL:          http://localhost:3010
+Mock CC:           http://localhost:3500
+Stack:             Next.js 14 (App Router) + TypeScript 5.7 + Tailwind 3.4
+                   pdf-lib 1.17 + CloudConvert v2 + Prisma + NextAuth v4
+                   + Upstash Redis (rate limit) + Mercado Pago + Stripe
+
+Escopo da Fase 6:
+  - delete-job pos-download (CloudConvert DELETE /v2/jobs/<id>)
+  - rate limit por usuario/anonimo (Upstash + fallback in-memory)
+  - paginas legais: /privacidade /termos /seguranca /cookies /suporte
+  - mensagem publica: 'Processou, baixou, descartou.'
+  - cabecalhos de seguranca (X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy)
+  - validacao de env em producao via lib/env.ts
+  - docs: DEPLOY-VERCEL.md e PRODUCTION-CHECKLIST.md
+
+Resultado: 40 pass / 0 fail  ->  PHASE 6 OK
+================================================================================
+=== PDF Master Pro - Testes oficiais da Fase 6 (seguranca) ===
+BASE     = http://localhost:3010
+CC_MOCK  = http://localhost:3500
+REPORT   = C:\Users\comer\OneDrive\Desktop\pdf-master-pro\PHASE6-TEST-REPORT.txt
+
+0) Subindo mocks...
+   cc ja esta em http://localhost:3500
+1) Aguardando dev server em http://localhost:3010
+   pronto.
+
+==== TEST 1: paginas legais retornam 200 ====
+PASS  1  /privacidade -> 200  (status=200)
+PASS  1  /termos -> 200  (status=200)
+PASS  1  /seguranca -> 200  (status=200)
+PASS  1  /cookies -> 200  (status=200)
+PASS  1  /suporte -> 200  (status=200)
+
+==== TEST 2: paginas legais mencionam retencao ====
+PASS  2  /privacidade menciona retencao/privacidade
+PASS  2  /termos menciona retencao/privacidade
+PASS  2  /seguranca menciona retencao/privacidade
+PASS  2  /cookies menciona retencao/privacidade
+PASS  2  /suporte menciona retencao/privacidade
+
+==== TEST 3: Footer da home tem links legais ====
+PASS  3  home footer link -> /privacidade
+PASS  3  home footer link -> /termos
+PASS  3  home footer link -> /seguranca
+PASS  3  home footer link -> /cookies
+PASS  3  home footer link -> /suporte
+
+==== TEST 4: Footer de ferramenta tem links legais ====
+PASS  4  /ferramenta/merge footer link -> /privacidade
+PASS  4  /ferramenta/merge footer link -> /termos
+PASS  4  /ferramenta/merge footer link -> /seguranca
+PASS  4  /ferramenta/merge footer link -> /cookies
+PASS  4  /ferramenta/merge footer link -> /suporte
+
+==== TEST 5: cabecalhos de seguranca ====
+PASS  5.a  X-Frame-Options = DENY  (got "DENY" expected "DENY")
+PASS  5.b  X-Content-Type-Options = nosniff  (got "nosniff" expected "nosniff")
+PASS  5.c  Referrer-Policy = strict-origin-when-cross-origin  (got "strict-origin-when-cross-origin" expected "strict-origin-when-cross-origin")
+PASS  5.d  Permissions-Policy restrito  (header="camera=(), microphone=(), geolocation=(), interest-cohort=()")
+PASS  5.e  sem X-Powered-By
+
+==== TEST 6: /api/cloudconvert/delete-job validacao ====
+PASS  6  jobId invalido ("") -> 400  (status=400 error=VALIDATION)
+PASS  6  jobId invalido ("../../etc/passwd") -> 400  (status=400 error=VALIDATION)
+PASS  6  jobId invalido ("id com espaco") -> 400  (status=400 error=VALIDATION)
+PASS  6  jobId invalido ("id;rm -rf /") -> 400  (status=400 error=VALIDATION)
+
+==== TEST 7: delete-job chama mock CC ====
+PASS  7.a  delete-job -> 200  (status=200 error=undefined)
+PASS  7.b  cleaned=true (mock respondeu 204)  (cleaned=true)
+PASS  7.c  mock CC recebeu DELETE do jobId  (deletes=["job-mock-test-1234"])
+
+==== TEST 8: delete-job nao expoe segredos ====
+PASS  8.a  nao expoe Authorization header
+PASS  8.b  nao expoe CLOUDCONVERT_API_KEY
+PASS  8.c  response contem apenas {ok, cleaned, message}  (keys=ok,cleaned,jobId)
+
+==== TEST 9: rate limiting do delete-job ====
+PASS  9  delete-job aplicado rate limit (algum request 429)  (firstStatus=200 blocked=true)
+
+==== TEST 10: smoke check de fases anteriores ====
+PASS  10.a  /pricing -> 200  (status=200)
+PASS  10.b  /account -> 200/302/307 (redireciona ou mostra login)  (status=307)
+PASS  10.c  /ferramenta/merge -> 200  (status=200)
+PASS  10.d  /contact-sales -> 200  (status=200)
+
+==== TOTAL: 40 pass / 0 fail ====
+PHASE 6 OK

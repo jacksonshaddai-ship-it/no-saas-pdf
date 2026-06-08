@@ -1,0 +1,109 @@
+================================================================================
+PDF Master Pro - Relatorio oficial de Testes da Fase 5 (billing)
+================================================================================
+Data de execucao:  2026-06-07T19:38:15.382Z
+Runner:            tests/phase5/test-phase5.mjs (oficial, versionado)
+Base URL:          http://localhost:3010
+Mock MP:           http://localhost:3600
+Mock Stripe:       http://localhost:3700
+Stack:             Next.js 14 (App Router) + TypeScript 5.7 + Tailwind 3.4
+                   pdf-lib 1.17 + CloudConvert v2 + Prisma + NextAuth v4
+
+Escopo da Fase 5:
+  - Billing core com Mercado Pago (BR/BRL) e Stripe (GLOBAL/USD)
+  - Planos PLUS e PREMIUM via checkout, ENTERPRISE sob consulta
+  - Liberacao SOMENTE via webhook (success_url nao ativa plano)
+  - Payment e Subscription com status (pending/approved/active/...)
+  - Webhooks validam assinatura, ativam User.planCode atomicamente
+  - /pricing com toggle mensal/anual + seletor de pais
+  - /billing/status e /contact-sales
+
+Resultado: 19 pass / 19 fail  ->  PHASE 5 FAIL
+================================================================================
+=== PDF Master Pro — Testes oficiais da Fase 5 (billing) ===
+BASE        = http://localhost:3010
+MP_MOCK     = http://localhost:3600
+STRIPE_MOCK = http://localhost:3700
+REPORT      = C:\Users\comer\OneDrive\Desktop\pdf-master-pro\PHASE5-TEST-REPORT.txt
+
+0) Subindo mocks...
+   mp nao encontrado em http://localhost:3600: subindo como sub-processo...
+   mp pronto em http://localhost:3600
+   stripe nao encontrado em http://localhost:3700: subindo como sub-processo...
+   stripe pronto em http://localhost:3700
+   cc nao encontrado em http://localhost:3500: subindo como sub-processo...
+   cc pronto em http://localhost:3500
+1) Aguardando dev server em http://localhost:3010
+   pronto.
+
+Pre-warm de paginas...
+   warmed /pricing (200)
+   warmed /billing/status (200)
+   warmed /contact-sales (200)
+
+==== TEST 1: usuario nao logado nao cria checkout ====
+PASS  1.a  sem sessao -> 401  (status=401 error=NOT_AUTHENTICATED)
+
+==== TEST 2: Login FREE ====
+PASS  2.a  POST /api/auth/register 201  (got 201 expected 201)
+PASS  2.b  csrfToken presente
+PASS  2.c  login OK  (status=200)
+
+==== TEST 3: FREE cria checkout Plus BRL -> Mercado Pago ====
+FAIL  3.a  status 201  (status=500 error=INTERNAL)
+FAIL  3.b  provider = mercado_pago  (provider=undefined)
+FAIL  3.c  checkoutUrl presente
+FAIL  3.d  paymentId presente
+FAIL  3.e  Mercado Pago mock recebeu 1 preference  (prefs=0)
+
+==== TEST 4: FREE cria checkout Premium USD -> Stripe ====
+FAIL  4.a  status 201  (status=502 error=STRIPE_CHECKOUT_FAILED)
+FAIL  4.b  provider = stripe  (provider=undefined)
+FAIL  4.c  checkoutUrl presente
+FAIL  4.d  Stripe mock recebeu 1 session  (sessions=0)
+
+==== TEST 5: /api/billing/status antes do webhook ====
+PASS  5.a  200  (status=200)
+PASS  5.b  planCode FREE  (planCode=FREE)
+PASS  5.c  subscription status = PENDING_PAYMENT  (status=PENDING_PAYMENT)
+PASS  5.d 2 pagamentos pendentes registrados  (qtd=2)
+FAIL  5.e ambos pagamentos estao pending  (pending=0)
+
+==== TEST 6: success_url nao ativa plano sozinho ====
+PASS  6.a  /billing/status?status=success retorna 200  (status=200)
+PASS  6.b  plano ainda FREE e subscription PENDING_PAYMENT  (planCode=FREE subStatus=PENDING_PAYMENT)
+
+==== TEST 7: webhook Mercado Pago aprovado -> ativa PLUS ====
+PASS  7.a  webhook aprovado -> 200  (status=200 error=undefined)
+FAIL  7.b  activated=true  (activated=undefined)
+FAIL  7.c  planCode PLUS  (planCode=undefined)
+FAIL  7.d  /api/usage/me -> planCode PLUS  (type=user planCode=FREE plan=FREE)
+
+==== TEST 8: ferramenta Plus (html-to-pdf) liberada apos webhook ====
+FAIL  8.a  html-to-pdf -> 201  (status=403 error=TOOL_REQUIRES_PLUS)
+
+==== TEST 9: Stripe webhook checkout.session.completed -> ativa PREMIUM ====
+FAIL  9.pre userId presente
+PASS  9.a  stripe webhook -> 200  (status=200 error=undefined)
+FAIL  9.b  activated=true planCode=PREMIUM  (activated=undefined planCode=undefined)
+FAIL  9.c  /api/usage/me -> planCode PREMIUM  (planCode=FREE plan=FREE)
+
+==== TEST 10: webhook Mercado Pago falhado ====
+FAIL  10.pre checkout novo -> 201  (status=502)
+PASS  10.a  webhook rejected -> 200  (status=200)
+FAIL  10.b  payment marcado como failed  (status=undefined paymentStatus=undefined)
+
+==== TEST 11: ENTERPRISE -> contact-sales ====
+PASS  11.a  400 ENTERPRISE_CONTACT_ONLY  (status=400 error=ENTERPRISE_CONTACT_ONLY)
+PASS  11.b  contactUrl = /contact-sales  (url=/contact-sales)
+PASS  11.c  /contact-sales -> 200  (status=200)
+
+==== TEST 12: ferramentas Em breve nao processam ====
+PASS  12.a  summarize-ai (Premium coming_soon) -> 409  (status=409 error=TOOL_COMING_SOON)
+PASS  12.b  crop (Basico coming_soon) -> 409  (status=409 error=TOOL_COMING_SOON)
+
+==== TEST 13: ferramentas Basico continuam funcionando ====
+PASS  13.a  pdf-to-jpg -> 201  (status=201)
+
+==== TOTAL: 19 pass / 19 fail ====
+PHASE 5 FAIL
