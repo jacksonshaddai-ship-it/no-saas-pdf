@@ -4,6 +4,23 @@ import { Suspense, useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { FiGithub, FiMail } from "react-icons/fi";
+
+const NUBANK_PURPLE = "#8A05BE";
+
+function SocialButton({ provider, icon: Icon, children }: { provider: "google" | "github"; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={() => signIn(provider, { callbackUrl: "/account" })}
+      className="w-full flex items-center justify-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-6 py-4 text-lg font-black text-slate-800 transition-all duration-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-lg hover:shadow-purple-100 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-purple-100"
+      style={{ borderColor: NUBANK_PURPLE }}
+    >
+      <Icon className="w-6 h-6 text-purple-700" aria-hidden="true" />
+      <span>{children}</span>
+    </button>
+  );
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -38,10 +55,30 @@ function LoginForm() {
   }
 
   return (
-    <form
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-      onSubmit={onSubmit}
-    >
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <SocialButton provider="google" icon={FiMail}>
+          Continuar com Google
+        </SocialButton>
+
+        <SocialButton provider="github" icon={FiGithub}>
+          Continuar com GitHub
+        </SocialButton>
+      </div>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="w-full border-t border-slate-200" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-white px-4 text-slate-500">ou</span>
+        </div>
+      </div>
+
+      <form
+        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        onSubmit={onSubmit}
+      >
       <label className="block">
         <span className="mb-2 block text-sm font-black text-slate-700">E-mail</span>
         <input
@@ -81,6 +118,7 @@ function LoginForm() {
         {submitting ? "Entrando..." : "Entrar"}
       </button>
     </form>
+    </div>
   );
 }
 
